@@ -13,13 +13,57 @@ PART 3: Logistic Regression
 '''
 
 # Import any further packages you may need for PART 3
+from __future__ import annotations
+import os
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.model_selection import StratifiedKFold as KFold_strat
-from sklearn.linear_model import LogisticRegression as lr
+from sklearn.model_selection import StratifiedKFold
+from sklearn.linear_model import LogisticRegression
 
 
-# Your code here
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+ARRESTS_IN = os.path.join(DATA_DIR, "df_arrests.csv")
+LR_TRAIN_OUT = os.path.join(DATA_DIR, "df_arrests_train_lr.csv")
+LR_TEST_OUT  = os.path.join(DATA_DIR, "df_arrests_test_lr.csv")
+
+def run_logistic():
+    df = pd.read_csv(ARRESTS_IN, parse_dates=["arrest_date_univ"])
+    features = ["num_fel_arrests_last_year", "current_charge_felony"]
+    target = "y"
+
+    X = df[features].values
+    y = df[target].values
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.30, shuffle=True, stratify=y, random_state=42
+    )
+
+    param_grid = {"C": [0.1, 1.0, 10.0]}
+    lr_model = LogisticRegression(solver="liblinear", max_iter=1000)
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    gs_cv = GridSearchCV(lr_model, param_grid=param_grid, scoring="roc_auc", cv=cv, n_jobs=-1)
+    gs_cv.fit(X_train, y_train)
+
+    best_C = gs_cv.best_params_["C"]
+    interp = {0.1: "most regularization", 1.0: "in the middle", 10.0: "least regularization"}[best_C]
+    print("What was the optimal value for C?")
+    print(f"Answer: {best_C}")
+    print("Did it have the most or least regularization? Or in the middle?")
+    print(f"Answer: {interp}")
+
+    best_lr = gs_cv.best_estimator_
+    df_train = pd.DataFrame(X_train, columns=features)
+    df_train[target] = y_train
+
+    df_test = pd.DataFrame(X_test, columns=features)
+    df_test[target] = y_test
+    df_test["pred_lr"] = best_lr.predict_proba(X_test)[:, 1]
+
+    df_train.to_csv(LR_TRAIN_OUT, index=False)
+    df_test.to_csv(LR_TEST_OUT, index=False)
+    print(f"[LR] Saved: {LR_TRAIN_OUT}")
+    print(f"[LR] Saved: {LR_TEST_OUT}")
+    return df_train, df_test
 
 

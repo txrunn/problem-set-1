@@ -18,28 +18,31 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Calibration plot function 
-def calibration_plot(y_true, y_prob, n_bins=10):
+def calibration_plot(y_true, y_prob, n_bins=10, label="Model"):
     """
-    Create a calibration plot with a 45-degree dashed line.
-
-    Parameters:
-        y_true (array-like): True binary labels (0 or 1).
-        y_prob (array-like): Predicted probabilities for the positive class.
-        n_bins (int): Number of bins to divide the data for calibration.
-
-    Returns:
-        None
+    Create a calibration plot with a 45-degree dashed line and
+    return a simple average |mean_pred - frac_positive| (ECE-like).
     """
-    #Calculate calibration values
-    bin_means, prob_true = calibration_curve(y_true, y_prob, n_bins=n_bins)
-    
-    #Create the Seaborn plot
-    sns.set(style="whitegrid")
-    plt.plot([0, 1], [0, 1], "k--")
-    plt.plot(prob_true, bin_means, marker='o', label="Model")
-    
+    # sklearn returns: (prob_true, prob_pred)
+    prob_true, prob_pred = calibration_curve(
+        y_true, y_prob, n_bins=n_bins, strategy="quantile"
+    )
+
+    # Seaborn styling
+    sns.set_theme(style="whitegrid")
+
+    # Plot: x = mean predicted probability, y = fraction of positives
+    plt.figure()
+    plt.plot([0, 1], [0, 1], "k--", label="Perfectly calibrated")
+    plt.plot(prob_pred, prob_true, marker="o", label=label)
+
     plt.xlabel("Mean Predicted Probability")
     plt.ylabel("Fraction of Positives")
-    plt.title("Calibration Plot")
+    plt.title(f"Calibration Plot ({label})")
     plt.legend(loc="best")
+    plt.tight_layout()
     plt.show()
+
+    # Return an ECE-like scalar for comparison in main.py
+    ece = float(np.mean(np.abs(prob_pred - prob_true)))
+    return ece

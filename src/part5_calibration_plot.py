@@ -16,6 +16,7 @@ Do both metrics agree that one model is more accurate than the other? Print this
 from sklearn.calibration import calibration_curve
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 # Calibration plot function 
 def calibration_plot(y_true, y_prob, n_bins=10, label="Model"):
